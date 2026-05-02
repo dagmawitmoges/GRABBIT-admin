@@ -1,14 +1,24 @@
 import { useEffect } from "react";
-import api from "../utils/axiosInstance";
+import { supabase } from "../utils/supabase";
 
 const TestApi = () => {
   useEffect(() => {
-    api.get("/admin/dashboard")
-      .then(res => console.log("API OK:", res.data))
-      .catch(err => console.log("API ERROR:", err));
+    const fetchData = async () => {
+      const { data, error } = await supabase
+        .from("vendors") // or "dashboard" depending on your table/view
+        .select("*");
+
+      if (error) {
+        console.error("API ERROR:", error.message);
+      } else {
+        console.log("API OK:", data);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  return <p>Testing API...</p>;
+  return <p>Testing Supabase API...</p>;
 };
 
 export default TestApi;
