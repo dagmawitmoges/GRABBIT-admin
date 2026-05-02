@@ -2,122 +2,70 @@ import { useEffect, useState } from "react";
 import api from "../utils/axiosInstance";
 import Sidebar from "../components/Sidebar";
 
-const MUTED = "#6B7C6B";
-const G = "#1DB954";
-
-type Issue = {
+type VendorRequest = {
   id: string;
-  reporter: string;
-  description: string;
-  status: "open" | "resolved";
-  created_at?: string;
+  business_name: string;
+  owner_name?: string;
+  tin?: string;
+  address?: string;
+  branch_count?: number;
+  user: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone?: string;
+    created_at?: string;
+  };
 };
 
 const IssuesPage = () => {
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [requests, setRequests] = useState<VendorRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "open" | "resolved">("all");
 
-  useEffect(() => {
-    fetchIssues();
-  }, []);
+  useEffect(() => { fetchRequests(); }, []);
 
-  const fetchIssues = async () => {
+  const fetchRequests = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/admin/issues");
-      setIssues(res.data);
+      const res = await api.get("/admin/vendors");
+      setRequests(res.data);
     } finally {
       setLoading(false);
     }
   };
 
-  const resolveIssue = async (id: string) => {
-    await api.put(`/admin/issues/${id}/resolve`);
-    setIssues(prev => prev.map(i => i.id === id ? { ...i, status: "resolved" } : i));
-  };
-
-  const filtered = issues.filter(i => filter === "all" || i.status === filter);
-  const openCount = issues.filter(i => i.status === "open").length;
-
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#F5F8F5", fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
+    <div className="flex min-h-screen bg-white">
       <Sidebar />
+      <div className="flex-1 p-6">
+        <h1 className="text-2xl font-bold">Vendor Requests</h1>
+        <p className="text-sm text-gray-600">
+          {loading ? "Loading…" : `${requests.length} requests`}
+        </p>
 
-      <div style={{ flex: 1, padding: "28px 32px" }}>
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0F1F0F", margin: 0, letterSpacing: "-0.5px" }}>Issues & Reports</h1>
-            <p style={{ fontSize: 13, color: MUTED, margin: "4px 0 0" }}>
-              {openCount} open issue{openCount !== 1 ? "s" : ""}
-            </p>
-          </div>
-
-          {/* Filter tabs */}
-          <div style={{ display: "flex", gap: 6, background: "#fff", padding: 4, borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            {(["all", "open", "resolved"] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                style={{
-                  padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontSize: 13, fontWeight: 700, transition: "all 0.15s",
-                  backgroundColor: filter === f ? G : "transparent",
-                  color: filter === f ? "#fff" : MUTED,
-                }}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Table card */}
-        <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+        <div className="bg-white rounded shadow mt-4 overflow-x-auto">
           {loading ? (
-            <Empty icon="⏳" text="Loading issues…" />
-          ) : filtered.length === 0 ? (
-            <Empty icon="✅" text="No issues found" />
+            <Empty icon="⏳" text="Loading requests…" />
+          ) : requests.length === 0 ? (
+            <Empty icon="👥" text="No requests found" />
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="min-w-full border-collapse">
               <thead>
-                <tr style={{ borderBottom: "1px solid #F0F4F0" }}>
-                  {["Reporter", "Description", "Status", "Action"].map(h => (
-                    <th key={h} style={thStyle}>{h}</th>
+                <tr className="border-b">
+                  {["Business", "Owner", "Email", "Phone", "TIN", "Branches"].map(h => (
+                    <th key={h} className="px-4 py-2 text-xs font-bold text-gray-600 uppercase">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((issue, idx) => (
-                  <tr key={issue.id} style={{ backgroundColor: idx % 2 === 0 ? "#fff" : "#FAFCFA", borderBottom: "1px solid #F0F4F0" }}>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: 600, color: "#0F1F0F" }}>{issue.reporter}</div>
-                    </td>
-                    <td style={{ ...tdStyle, maxWidth: 320 }}>
-                      <div style={{ color: MUTED, fontSize: 13, lineHeight: 1.5 }}>{issue.description}</div>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{
-                        padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700,
-                        backgroundColor: issue.status === "resolved" ? "#E8F5ED" : "#FFF3E0",
-                        color: issue.status === "resolved" ? G : "#E65100",
-                      }}>
-                        {issue.status === "resolved" ? "✓ Resolved" : "● Open"}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      {issue.status !== "resolved" && (
-                        <button
-                          onClick={() => resolveIssue(issue.id)}
-                          style={resolveBtnStyle}
-                          onMouseEnter={e => ((e.target as HTMLButtonElement).style.backgroundColor = "#17a347")}
-                          onMouseLeave={e => ((e.target as HTMLButtonElement).style.backgroundColor = G)}
-                        >
-                          Mark Resolved
-                        </button>
-                      )}
-                    </td>
+                {requests.map((r, idx) => (
+                  <tr key={r.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    <td className="px-4 py-2">{r.business_name}</td>
+                    <td className="px-4 py-2">{r.owner_name || "-"}</td>
+                    <td className="px-4 py-2">{r.user.email}</td>
+                    <td className="px-4 py-2">{r.user.phone || "-"}</td>
+                    <td className="px-4 py-2">{r.tin || "-"}</td>
+                    <td className="px-4 py-2">{r.branch_count || 1}</td>
                   </tr>
                 ))}
               </tbody>
@@ -130,21 +78,9 @@ const IssuesPage = () => {
 };
 
 const Empty = ({ icon, text }: { icon: string; text: string }) => (
-  <div style={{ padding: 48, textAlign: "center", color: MUTED, fontSize: 14 }}>
-    <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>{text}
+  <div className="p-12 text-center text-gray-600 text-sm">
+    <div className="text-3xl mb-2">{icon}</div>{text}
   </div>
 );
-
-const thStyle: React.CSSProperties = {
-  padding: "14px 20px", textAlign: "left", fontSize: 12,
-  fontWeight: 700, color: MUTED, letterSpacing: "0.5px",
-  textTransform: "uppercase",
-};
-const tdStyle: React.CSSProperties = { padding: "14px 20px", fontSize: 14 };
-const resolveBtnStyle: React.CSSProperties = {
-  padding: "7px 14px", backgroundColor: G, color: "#fff",
-  border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700,
-  cursor: "pointer", transition: "background-color 0.2s",
-};
 
 export default IssuesPage;

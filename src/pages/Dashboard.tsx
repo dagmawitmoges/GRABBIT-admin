@@ -35,7 +35,6 @@ const Dashboard = () => {
     blocked: vendors.filter(v => v.status === "blocked").length,
   };
 
-  // Show only the 5 most recent on the dashboard
   const recentVendors = vendors.slice(0, 5);
 
   const toggleStatus = async (id: number, status: string) => {
@@ -61,42 +60,36 @@ const Dashboard = () => {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: BG, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+    <div className="flex min-h-screen bg-[#F5F8F5] font-sans">
       <Sidebar />
 
-      <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
+      <div className="flex-1 p-6 overflow-y-auto">
         <Header onAdd={() => setShowModal(true)} />
 
         {/* Stat cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, margin: "24px 0" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
           <StatTile label="Total Vendors" value={stats.total} icon="🏪" accent={G} />
           <StatTile label="Active" value={stats.active} icon="✅" accent={G} />
           <StatTile label="Blocked" value={stats.blocked} icon="🚫" accent="#E53935" />
         </div>
 
-        {/* Recent vendors section header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        {/* Recent vendors header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 800, color: "#0F1F0F", margin: 0 }}>Recent Vendors</h2>
-            <p style={{ fontSize: 13, color: MUTED, margin: "2px 0 0" }}>Last {recentVendors.length} registered</p>
+            <h2 className="text-lg font-bold text-[#0F1F0F]">Recent Vendors</h2>
+            <p className="text-sm text-gray-600">Last {recentVendors.length} registered</p>
           </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={exportCSV}
-              style={ghostBtnStyle}
-              onMouseEnter={e => ((e.target as HTMLButtonElement).style.backgroundColor = GL)}
-              onMouseLeave={e => ((e.target as HTMLButtonElement).style.backgroundColor = "#fff")}
+              className="px-3 py-2 border border-green-600 rounded text-green-600 bg-white hover:bg-[#E8F5ED] transition"
             >
               ↓ Export CSV
             </button>
-
-            {/* ✅ Route to full vendors page */}
             <button
               onClick={() => navigate("/vendors")}
-              style={primaryBtnStyle}
-              onMouseEnter={e => ((e.target as HTMLButtonElement).style.backgroundColor = "#17a347")}
-              onMouseLeave={e => ((e.target as HTMLButtonElement).style.backgroundColor = G)}
+              className="px-3 py-2 rounded bg-green-600 text-white font-semibold shadow hover:bg-green-700 transition"
             >
               View All Vendors →
             </button>
@@ -104,15 +97,11 @@ const Dashboard = () => {
         </div>
 
         {/* Table card */}
-        <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+        <div className="bg-white rounded shadow overflow-x-auto">
           {loading ? (
-            <div style={emptyStyle}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>Loading vendors…
-            </div>
+            <Empty icon="⏳" text="Loading vendors…" />
           ) : recentVendors.length === 0 ? (
-            <div style={emptyStyle}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>🏪</div>No vendors yet
-            </div>
+            <Empty icon="🏪" text="No vendors yet" />
           ) : (
             <VendorTable vendors={recentVendors} onToggle={toggleStatus} />
           )}
@@ -127,47 +116,21 @@ const Dashboard = () => {
 };
 
 const StatTile = ({ label, value, icon, accent }: { label: string; value: number; icon: string; accent: string }) => (
-  <div style={{ background: "#fff", borderRadius: 16, padding: "20px 24px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 16 }}>
-    <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: accent === "#E53935" ? "#FFEBEE" : "#E8F5ED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+  <div className="bg-white rounded p-5 shadow flex items-center gap-4">
+    <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl ${accent === "#E53935" ? "bg-red-100" : "bg-green-100"}`}>
       {icon}
     </div>
     <div>
-      <div style={{ fontSize: 26, fontWeight: 800, color: accent, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>{label}</div>
+      <div className="text-2xl font-bold" style={{ color: accent }}>{value}</div>
+      <div className="text-sm text-gray-600">{label}</div>
     </div>
   </div>
 );
 
-const ghostBtnStyle: React.CSSProperties = {
-  padding: "9px 16px",
-  border: "1.5px solid #1DB954",
-  borderRadius: 10,
-  fontSize: 13,
-  fontWeight: 700,
-  color: "#1DB954",
-  backgroundColor: "#fff",
-  cursor: "pointer",
-  transition: "background-color 0.2s",
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: "9px 16px",
-  backgroundColor: "#1DB954",
-  color: "#fff",
-  border: "none",
-  borderRadius: 10,
-  fontSize: 13,
-  fontWeight: 700,
-  cursor: "pointer",
-  transition: "background-color 0.2s",
-  boxShadow: "0 4px 12px rgba(29,185,84,0.3)",
-};
-
-const emptyStyle: React.CSSProperties = {
-  padding: 48,
-  textAlign: "center",
-  color: MUTED,
-  fontSize: 14,
-};
+const Empty = ({ icon, text }: { icon: string; text: string }) => (
+  <div className="p-12 text-center text-gray-600 text-sm">
+    <div className="text-3xl mb-2">{icon}</div>{text}
+  </div>
+);
 
 export default Dashboard;

@@ -2,138 +2,86 @@ import { useEffect, useState } from "react";
 import api from "../utils/axiosInstance";
 import Sidebar from "../components/Sidebar";
 
-const G = "#1DB954";
-const MUTED = "#6B7C6B";
-
-type User = {
+type Vendor = {
   id: string;
-  email: string;
-  role: string;
-  blocked: boolean;
-  created_at?: string;
+  business_name: string;
+  owner_name?: string;
+  tin?: string;
+  address?: string;
+  branch_count?: number;
+  user: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone?: string;
+    created_at?: string;
+  };
 };
 
 const UsersPage = () => {
-  const [users, setUsers] = useState<User[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "active" | "blocked">("all");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { fetchVendors(); }, []);
 
-  const fetchUsers = async () => {
+  const fetchVendors = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/admin/users");
-      setUsers(res.data);
+      const res = await api.get("/admin/vendors");
+      setVendors(res.data);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleBlock = async (id: string, blocked: boolean) => {
-    await api.put(`/admin/users/${id}/block`, { blocked: !blocked });
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, blocked: !blocked } : u));
-  };
-
-  const filtered = users
-    .filter(u => u.email.toLowerCase().includes(search.toLowerCase()))
-    .filter(u => filter === "all" || (filter === "blocked" ? u.blocked : !u.blocked));
+  const filtered = vendors.filter(v =>
+    v.user.email.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#F5F8F5", fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
+    <div className="flex min-h-screen bg-white">
       <Sidebar />
+      <div className="flex-1 p-6">
+        <h1 className="text-2xl font-bold">Vendors</h1>
+        <p className="text-sm text-gray-600">
+          {loading ? "Loading…" : `${vendors.length} registered vendors`}
+        </p>
 
-      <div style={{ flex: 1, padding: "28px 32px" }}>
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0F1F0F", margin: 0, letterSpacing: "-0.5px" }}>Users</h1>
-            <p style={{ fontSize: 13, color: MUTED, margin: "4px 0 0" }}>
-              {loading ? "Loading…" : `${users.length} total users`}
-            </p>
-          </div>
+        {/* Search bar */}
+        <div className="my-4">
+          <input
+            placeholder="Search by email…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full sm:w-80 border rounded p-2"
+          />
         </div>
 
-        {/* Controls */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
-          <div style={{ position: "relative" }}>
-            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: MUTED, pointerEvents: "none" }}>🔍</span>
-            <input
-              placeholder="Search by email…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: 6, background: "#fff", padding: 4, borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            {(["all", "active", "blocked"] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)} style={{
-                padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontSize: 13, fontWeight: 700, transition: "all 0.15s",
-                backgroundColor: filter === f ? G : "transparent",
-                color: filter === f ? "#fff" : MUTED,
-              }}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Table card */}
-        <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+        {/* Table */}
+        <div className="bg-white rounded shadow overflow-x-auto">
           {loading ? (
-            <Empty icon="⏳" text="Loading users…" />
+            <Empty icon="⏳" text="Loading vendors…" />
           ) : filtered.length === 0 ? (
-            <Empty icon="👥" text="No users found" />
+            <Empty icon="👥" text="No vendors found" />
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="min-w-full border-collapse">
               <thead>
-                <tr style={{ borderBottom: "1px solid #F0F4F0" }}>
-                  {["User", "Role", "Status", "Action"].map(h => (
-                    <th key={h} style={thStyle}>{h}</th>
+                <tr className="border-b">
+                  {["Business", "Owner", "Email", "Phone", "TIN", "Branches"].map(h => (
+                    <th key={h} className="px-4 py-2 text-xs font-bold text-gray-600 uppercase">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((u, idx) => (
-                  <tr key={u.id} style={{ backgroundColor: idx % 2 === 0 ? "#fff" : "#FAFCFA", borderBottom: "1px solid #F0F4F0" }}>
-                    <td style={tdStyle}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: "#E8F5ED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: G }}>
-                          {u.email[0].toUpperCase()}
-                        </div>
-                        <span style={{ fontWeight: 600, color: "#0F1F0F" }}>{u.email}</span>
-                      </div>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600, backgroundColor: "#F0F4F0", color: MUTED }}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{
-                        padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700,
-                        backgroundColor: u.blocked ? "#FFEBEE" : "#E8F5ED",
-                        color: u.blocked ? "#E53935" : G,
-                      }}>
-                        {u.blocked ? "Blocked" : "Active"}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <button
-                        onClick={() => toggleBlock(u.id, u.blocked)}
-                        style={{
-                          padding: "7px 14px", border: "none", borderRadius: 8,
-                          fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "opacity 0.2s",
-                          backgroundColor: u.blocked ? G : "#FFEBEE",
-                          color: u.blocked ? "#fff" : "#E53935",
-                        }}
-                      >
-                        {u.blocked ? "Unblock" : "Block"}
-                      </button>
-                    </td>
+                {filtered.map((v, idx) => (
+                  <tr key={v.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    <td className="px-4 py-2">{v.business_name}</td>
+                    <td className="px-4 py-2">{v.owner_name || "-"}</td>
+                    <td className="px-4 py-2">{v.user.email}</td>
+                    <td className="px-4 py-2">{v.user.phone || "-"}</td>
+                    <td className="px-4 py-2">{v.tin || "-"}</td>
+                    <td className="px-4 py-2">{v.branch_count || 1}</td>
                   </tr>
                 ))}
               </tbody>
@@ -146,20 +94,9 @@ const UsersPage = () => {
 };
 
 const Empty = ({ icon, text }: { icon: string; text: string }) => (
-  <div style={{ padding: 48, textAlign: "center", color: MUTED, fontSize: 14 }}>
-    <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>{text}
+  <div className="p-12 text-center text-gray-600 text-sm">
+    <div className="text-3xl mb-2">{icon}</div>{text}
   </div>
 );
-
-const inputStyle: React.CSSProperties = {
-  padding: "10px 14px 10px 38px", border: "1.5px solid #E2E8E2",
-  borderRadius: 10, fontSize: 14, color: "#0F1F0F",
-  backgroundColor: "#fff", outline: "none", minWidth: 240,
-};
-const thStyle: React.CSSProperties = {
-  padding: "14px 20px", textAlign: "left", fontSize: 12,
-  fontWeight: 700, color: MUTED, letterSpacing: "0.5px", textTransform: "uppercase",
-};
-const tdStyle: React.CSSProperties = { padding: "14px 20px", fontSize: 14 };
 
 export default UsersPage;
