@@ -1,17 +1,15 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import VendorsPage from "./pages/VendorsPage";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/vendors" element={<VendorsPage />} />
-        <Route path="*" element={<div>404 - Page Not Found</div>} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/vendors" element={<VendorsPage />} />
+      <Route path="*" element={<div>404 - Page Not Found</div>} />
+    </Routes>
   );
 }
 
