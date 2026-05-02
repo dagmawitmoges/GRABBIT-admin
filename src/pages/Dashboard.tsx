@@ -7,9 +7,6 @@ import VendorTable from "../components/vendortable";
 import AddVendorModal from "../components/CreateVendorModal";
 
 const G = "#1DB954";
-const GL = "#E8F5ED";
-const BG = "#F5F8F5";
-const MUTED = "#6B7C6B";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -60,7 +57,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F5F8F5] font-sans">
+    <div className="flex min-h-screen bg-white font-sans">
       <Sidebar />
 
       <div className="flex-1 p-6 overflow-y-auto">
@@ -83,7 +80,7 @@ const Dashboard = () => {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={exportCSV}
-              className="px-3 py-2 border border-green-600 rounded text-green-600 bg-white hover:bg-[#E8F5ED] transition"
+              className="px-3 py-2 border border-green-600 rounded text-green-600 bg-white hover:bg-green-50 transition"
             >
               ↓ Export CSV
             </button>
