@@ -1,23 +1,13 @@
-import React, { useContext, type JSX } from "react";
 import { Navigate } from "react-router-dom";
+import { useContext } from "react";
 import { AuthContext } from "../Contexts/authContext";
 
-interface ProtectedRouteProps {
-  children: JSX.Element;
-}
-
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+export default function ProtectedRoute({ children }: any) {
   const { user } = useContext(AuthContext);
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
+  if (!user) return <Navigate to="/login" />;
 
-  if (user.role?.toLowerCase() !== "admin") {
-    return <Navigate to="/" replace />;
-  }
+  if (user.role !== "admin") return <Navigate to="/unauthorized" />;
 
   return children;
-};
-
-export default ProtectedRoute;
+}

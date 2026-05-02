@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api from "../utils/axiosInstance";
 import Sidebar from "../components/Sidebar";
+import { supabase } from "../utils/supabase";
 
 const G = "#1DB954";
-const GL = "#E8F5ED";
-const MUTED = "#6B7C6B";
-const DARK = "#0F1F0F";
 
 type Vendor = {
-  id: string | number;
+  id: string; // ✅ FIXED (Supabase UUID)
   business_name: string;
   owner_name: string;
   phone?: string;
@@ -20,213 +17,234 @@ type Vendor = {
   location?: string;
   tin?: string;
   user?: { email: string };
-  email?: string;
 };
 
 const VendorDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [vendor, setVendor] = useState<Vendor | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Vendor | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
 
+  const vendorId = id ?? ""; // ✅ safe fallback
+
+  const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [draft, setDraft] = useState<Vendor | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // ───── FETCH ─────
   useEffect(() => {
     const fetchVendor = async () => {
-      try {
-        setLoading(true);
-        // Try direct endpoint first, fall back to list search
-        try {
-          const res = await api.get(`/admin/vendors/${id}`);
-          setVendor(res.data);
-          setDraft(res.data);
-        } catch {
-          const res = await api.get("/admin/vendors");
-          const found = res.data.find((v: Vendor) => String(v.id) === id);
-          setVendor(found ?? null);
-          setDraft(found ?? null);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchVendor();
-  }, [id]);
+      if (!vendorId) return;
 
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("vendors")
+        .select("*, user:users(*)")
+        .eq("id", vendorId)
+        .single();
+
+      if (error) {
+        console.error(error.message);
+        setVendor(null);
+      } else {
+        setVendor(data);
+        setDraft(data);
+      }
+
+      setLoading(false);
+    };
+
+    fetchVendor();
+  }, [vendorId]);
+
+  // ───── VALIDATION ─────
   const validate = () => {
     if (!draft) return false;
+
     const errs: Record<string, string> = {};
-    if (!draft.business_name?.trim()) errs.business_name = "Business name is required";
-    if (!draft.owner_name?.trim()) errs.owner_name = "Owner name is required";
+
+    if (!draft.business_name?.trim()) {
+      errs.business_name = "Business name is required";
+    }
+
+    if (!draft.owner_name?.trim()) {
+      errs.owner_name = "Owner name is required";
+    }
+
     const phone = draft.phone || draft.contact_phone || "";
-    if (!phone.match(/^\+?[0-9]{9,15}$/)) errs.phone = "Enter a valid phone number";
+    if (phone && !/^\+?[0-9]{9,15}$/.test(phone)) {
+      errs.phone = "Invalid phone number";
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
+  // ───── SAVE ─────
   const handleSave = async () => {
     if (!validate() || !draft) return;
-    try {
-      setSaving(true);
-      await api.put(`/admin/vendors/${draft.id}`, draft);
+
+    setSaving(true);
+
+    const { error } = await supabase
+      .from("vendors")
+      .update({
+        business_name: draft.business_name,
+        owner_name: draft.owner_name,
+        phone: draft.phone,
+        contact_phone: draft.contact_phone,
+        address: draft.address,
+        location: draft.location,
+        tin: draft.tin,
+        business_type: draft.business_type,
+      })
+      .eq("id", draft.id);
+
+    if (error) {
+      setErrors({ general: error.message });
+    } else {
       setVendor(draft);
       setEditing(false);
       setErrors({});
-    } catch (e: any) {
-      setErrors({ general: e.response?.data?.message || "Save failed" });
-    } finally {
-      setSaving(false);
+    }
+
+    setSaving(false);
+  };
+
+  // ───── STATUS TOGGLE ─────
+  const toggleStatus = async () => {
+    if (!vendor) return;
+
+    const newStatus =
+      vendor.status === "active" ? "blocked" : "active";
+
+    const { error } = await supabase
+      .from("vendors")
+      .update({ status: newStatus })
+      .eq("id", vendor.id);
+
+    if (!error) {
+      const updated = { ...vendor, status: newStatus };
+      setVendor(updated);
+      setDraft(updated);
     }
   };
 
-  const handleCancel = () => {
-    setDraft(vendor);
-    setErrors({});
-    setEditing(false);
-  };
-
-  const toggleStatus = async () => {
-    if (!vendor) return;
-    const newStatus = vendor.status === "active" ? "blocked" : "active";
-    await api.patch(`/admin/vendors/${vendor.id}`, { status: newStatus });
-    const updated = { ...vendor, status: newStatus };
-    setVendor(updated);
-    setDraft(updated);
-  };
-
-  if (loading) return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#F5F8F5", fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
-      <Sidebar />
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center", color: MUTED }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
-          Loading vendor…
-        </div>
+  // ───── LOADING ─────
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        Loading...
       </div>
-    </div>
-  );
+    );
+  }
 
-  if (!vendor) return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#F5F8F5", fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
-      <Sidebar />
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center", color: MUTED }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>🔍</div>
-          Vendor not found
-        </div>
+  // ───── NOT FOUND ─────
+  if (!vendor) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        Vendor not found
       </div>
-    </div>
-  );
+    );
+  }
 
-  const email = vendor.user?.email ?? vendor.email ?? "N/A";
-  const phone = vendor.phone ?? vendor.contact_phone ?? "N/A";
-  const d = draft!;
+  const email = vendor.user?.email || "N/A";
+
+  // safe draft fallback
+  const d = draft ?? vendor;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#F5F8F5", fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
+    <div className="flex min-h-screen bg-white">
       <Sidebar />
 
-      <div style={{ flex: 1, padding: "28px 32px" }}>
-        {/* Back + header */}
-        <button onClick={() => navigate("/vendors")} style={backBtnStyle}>← Back to Vendors</button>
+      <div className="flex-1 p-6">
+        <button onClick={() => navigate("/vendors")}>
+          ← Back
+        </button>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", margin: "16px 0 24px" }}>
-          <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: DARK, margin: 0, letterSpacing: "-0.5px" }}>
-              {vendor.business_name}
-            </h1>
-            <p style={{ fontSize: 13, color: MUTED, margin: "4px 0 0" }}>{vendor.business_type ?? "Vendor"}</p>
-          </div>
+        <h1 className="text-2xl font-bold mt-4">
+          {vendor.business_name}
+        </h1>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <span style={{
-              padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 700,
-              backgroundColor: vendor.status === "active" ? GL : "#FFEBEE",
-              color: vendor.status === "active" ? G : "#E53935",
-            }}>
-              {vendor.status === "active" ? "✓ Active" : "✕ Blocked"}
-            </span>
+        <p className="text-gray-500">
+          {vendor.business_type || "Vendor"}
+        </p>
 
-            <button
-              onClick={toggleStatus}
-              style={{
-                padding: "8px 16px", border: "none", borderRadius: 10,
-                fontSize: 13, fontWeight: 700, cursor: "pointer",
-                backgroundColor: vendor.status === "active" ? "#FFEBEE" : GL,
-                color: vendor.status === "active" ? "#E53935" : G,
-              }}
-            >
-              {vendor.status === "active" ? "Block Vendor" : "Unblock Vendor"}
-            </button>
+        {/* STATUS */}
+        <div className="mt-4 flex gap-2 items-center">
+          <span
+            className="px-3 py-1 rounded text-white"
+            style={{
+              background:
+                vendor.status === "active" ? G : "#E53935",
+            }}
+          >
+            {vendor.status}
+          </span>
 
-            {!editing && (
-              <button onClick={() => setEditing(true)} style={primaryBtn}>
-                ✎ Edit Vendor
-              </button>
-            )}
-          </div>
+          <button onClick={toggleStatus}>
+            Toggle Status
+          </button>
+
+          <button onClick={() => setEditing(true)}>
+            Edit
+          </button>
         </div>
 
+        {/* ERROR */}
         {errors.general && (
-          <div style={{ background: "#FFEBEE", border: "1px solid #FFCDD2", borderRadius: 10, padding: "10px 16px", color: "#C62828", marginBottom: 16, fontSize: 13 }}>
-            ⚠ {errors.general}
-          </div>
+          <p className="text-red-500 mt-2">
+            {errors.general}
+          </p>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {/* Business Info */}
-          <InfoCard title="Business Information">
-            {editing ? (
-              <>
-                <EditField label="Business Name" value={d.business_name} error={errors.business_name}
-                  onChange={v => setDraft({ ...d, business_name: v })} />
-                <EditField label="Owner Name" value={d.owner_name} error={errors.owner_name}
-                  onChange={v => setDraft({ ...d, owner_name: v })} />
-                <EditField label="Business Type" value={d.business_type ?? ""} error=""
-                  onChange={v => setDraft({ ...d, business_type: v })} />
-                <EditField label="TIN" value={d.tin ?? ""} error=""
-                  onChange={v => setDraft({ ...d, tin: v })} />
-              </>
-            ) : (
-              <>
-                <InfoRow label="Business Name" value={vendor.business_name} />
-                <InfoRow label="Owner Name" value={vendor.owner_name} />
-                <InfoRow label="Business Type" value={vendor.business_type ?? "N/A"} />
-                <InfoRow label="TIN" value={vendor.tin ?? "N/A"} />
-              </>
-            )}
-          </InfoCard>
+        {/* FORM */}
+        <div className="grid grid-cols-2 gap-4 mt-6">
+          <Card title="Business Info">
+            <Input
+              label="Business Name"
+              value={d.business_name}
+              onChange={(v: string) =>
+                setDraft({ ...d, business_name: v })
+              }
+              error={errors.business_name}
+            />
 
-          {/* Contact Info */}
-          <InfoCard title="Contact Information">
-            {editing ? (
-              <>
-                <EditField label="Phone" value={d.phone ?? d.contact_phone ?? ""} error={errors.phone}
-                  onChange={v => setDraft({ ...d, phone: v, contact_phone: v })} />
-                <EditField label="Address" value={d.address ?? ""} error=""
-                  onChange={v => setDraft({ ...d, address: v })} />
-                <EditField label="Location" value={d.location ?? ""} error=""
-                  onChange={v => setDraft({ ...d, location: v })} />
-              </>
-            ) : (
-              <>
-                <InfoRow label="Email" value={email} />
-                <InfoRow label="Phone" value={phone} />
-                <InfoRow label="Address" value={vendor.address ?? "N/A"} />
-                <InfoRow label="Location" value={vendor.location ?? "N/A"} />
-              </>
-            )}
-          </InfoCard>
+            <Input
+              label="Owner Name"
+              value={d.owner_name}
+              onChange={(v: string) =>
+                setDraft({ ...d, owner_name: v })
+              }
+              error={errors.owner_name}
+            />
+          </Card>
+
+          <Card title="Contact">
+            <Input label="Email" value={email} disabled />
+
+            <Input
+              label="Phone"
+              value={d.phone || ""}
+              onChange={(v: string) =>
+                setDraft({ ...d, phone: v })
+              }
+              error={errors.phone}
+            />
+          </Card>
         </div>
 
-        {/* Save / Cancel */}
+        {/* SAVE */}
         {editing && (
-          <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
-            <button onClick={handleCancel} style={ghostBtn}>Cancel</button>
-            <button onClick={handleSave} disabled={saving} style={{ ...primaryBtn, opacity: saving ? 0.7 : 1 }}>
-              {saving ? "Saving…" : "Save Changes"}
+          <div className="mt-6 flex gap-2 justify-end">
+            <button onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+
+            <button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
             </button>
           </div>
         )}
@@ -235,51 +253,33 @@ const VendorDetailsPage = () => {
   );
 };
 
-/* ── Sub-components ── */
-
-const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div style={{ background: "#fff", borderRadius: 16, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
-    <p style={{ fontSize: 12, fontWeight: 700, color: MUTED, letterSpacing: "0.5px", textTransform: "uppercase", margin: "0 0 16px" }}>{title}</p>
+/* UI COMPONENTS */
+const Card = ({ title, children }: any) => (
+  <div className="bg-white p-4 shadow rounded">
+    <h3 className="font-bold mb-2">{title}</h3>
     {children}
   </div>
 );
 
-const InfoRow = ({ label, value }: { label: string; value: string }) => (
-  <div style={{ marginBottom: 14 }}>
-    <div style={{ fontSize: 11, color: MUTED, fontWeight: 600, marginBottom: 2 }}>{label}</div>
-    <div style={{ fontSize: 14, fontWeight: 600, color: DARK }}>{value}</div>
-  </div>
-);
-
-const EditField = ({ label, value, error, onChange }: { label: string; value: string; error: string; onChange: (v: string) => void }) => (
-  <div style={{ marginBottom: 14 }}>
-    <label style={{ fontSize: 11, color: MUTED, fontWeight: 600, display: "block", marginBottom: 4 }}>{label}</label>
+const Input = ({
+  label,
+  value,
+  onChange,
+  error,
+  disabled,
+}: any) => (
+  <div className="mb-3">
+    <label className="text-xs text-gray-500">{label}</label>
     <input
+      disabled={disabled}
       value={value}
-      onChange={e => onChange(e.target.value)}
-      style={{
-        width: "100%", padding: "9px 12px", border: `1.5px solid ${error ? "#E53935" : "#E2E8E2"}`,
-        borderRadius: 8, fontSize: 14, color: DARK, outline: "none", boxSizing: "border-box",
-      }}
-      onFocus={e => !error && (e.target.style.borderColor = G)}
-      onBlur={e => !error && (e.target.style.borderColor = "#E2E8E2")}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full border p-2 rounded"
     />
-    {error && <span style={{ fontSize: 11, color: "#E53935", marginTop: 2, display: "block" }}>{error}</span>}
+    {error && (
+      <p className="text-red-500 text-xs">{error}</p>
+    )}
   </div>
 );
-
-const backBtnStyle: React.CSSProperties = {
-  background: "none", border: "none", color: MUTED, cursor: "pointer",
-  fontSize: 13, fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 4,
-};
-const primaryBtn: React.CSSProperties = {
-  padding: "9px 18px", backgroundColor: G, color: "#fff",
-  border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700,
-  cursor: "pointer", boxShadow: "0 4px 12px rgba(29,185,84,0.3)",
-};
-const ghostBtn: React.CSSProperties = {
-  padding: "9px 18px", border: "1.5px solid #E2E8E2", backgroundColor: "#fff",
-  borderRadius: 10, fontSize: 13, fontWeight: 700, color: MUTED, cursor: "pointer",
-};
 
 export default VendorDetailsPage;
