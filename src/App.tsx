@@ -1,14 +1,40 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import VendorsPage from "./pages/VendorsPage";
+import VendorDetailsPage from "./pages/VendorDetailsPage";
+import UsersPage from "./pages/UsersPage";
+import IssuesPage from "./pages/IssuesPage";
+import { useContext } from "react";
+import { AuthContext } from "./Contexts/authContext";
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useContext(AuthContext);
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
+};
 
 function App() {
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/vendors" element={<VendorsPage />} />
-      <Route path="*" element={<div>404 - Page Not Found</div>} />
+
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/vendors" element={<ProtectedRoute><VendorsPage /></ProtectedRoute>} />
+      <Route path="/vendors/:id" element={<ProtectedRoute><VendorDetailsPage /></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+      <Route path="/issues" element={<ProtectedRoute><IssuesPage /></ProtectedRoute>} />
+
+      <Route path="*" element={
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "#F5F8F5", fontFamily: "'DM Sans','Segoe UI',sans-serif", gap: 12 }}>
+          <div style={{ fontSize: 64 }}>🔍</div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#0F1F0F", margin: 0 }}>404</h1>
+          <p style={{ color: "#6B7C6B", margin: 0 }}>Page not found</p>
+          <a href="/dashboard" style={{ marginTop: 8, padding: "10px 20px", backgroundColor: "#1DB954", color: "#fff", borderRadius: 10, fontWeight: 700, textDecoration: "none", fontSize: 14 }}>
+            Go to Dashboard
+          </a>
+        </div>
+      } />
     </Routes>
   );
 }
