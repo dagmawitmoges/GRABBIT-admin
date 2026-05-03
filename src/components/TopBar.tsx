@@ -11,15 +11,19 @@ function useClickOutside(
 ) {
   useEffect(() => {
     if (!open) return;
-    const handle = (e: MouseEvent) => {
+    const handle = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onOutside();
     };
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
+    document.addEventListener("pointerdown", handle);
+    return () => document.removeEventListener("pointerdown", handle);
   }, [ref, onOutside, open]);
 }
 
-const TopBar = () => {
+type TopBarProps = {
+  onOpenMobileNav?: () => void;
+};
+
+const TopBar = ({ onOpenMobileNav }: TopBarProps) => {
   const { user, logout } = useContext(AuthContext);
   const { theme, resolvedTheme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -51,7 +55,31 @@ const TopBar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-end gap-1 border-b border-gray-200 bg-white/90 px-3 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 border-b border-gray-200 bg-white/90 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90">
+      <div className="flex w-full min-w-0 items-center gap-1 px-2 sm:px-4">
+        <button
+          type="button"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 md:hidden"
+          aria-label="Open menu"
+          onClick={() => onOpenMobileNav?.()}
+        >
+          <svg
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
+
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
       {/* Notifications */}
       <div className="relative" ref={notifRef}>
         <button
@@ -225,6 +253,8 @@ const TopBar = () => {
             </button>
           </div>
         )}
+      </div>
+        </div>
       </div>
     </header>
   );
