@@ -5,7 +5,7 @@ const TestApi = () => {
   useEffect(() => {
     const fetchData = async () => {
       const { data, error } = await supabase
-        .from("vendors") // or "dashboard" depending on your table/view
+        .from("vendor_profiles")
         .select("*");
 
       if (error) {

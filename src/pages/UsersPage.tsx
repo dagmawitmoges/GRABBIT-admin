@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
+import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabase";
+import {
+  mapVendorProfileRow,
+  VENDOR_PROFILE_SELECT,
+} from "../utils/vendorData";
+import { adminUi } from "../constants/adminUi";
 
 const UsersPage = () => {
   const [vendors, setVendors] = useState<any[]>([]);
@@ -12,50 +17,75 @@ const UsersPage = () => {
 
   const fetchVendors = async () => {
     const { data } = await supabase
-      .from("vendors")
-      .select("*, user:users(*)");
+      .from("vendor_profiles")
+      .select(VENDOR_PROFILE_SELECT);
 
-    if (data) setVendors(data);
+    if (data) setVendors(data.map(mapVendorProfileRow));
   };
 
-  const filtered = vendors.filter(v =>
+  const filtered = vendors.filter((v) =>
     v.user?.email?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="flex min-h-screen bg-white">
-      <Sidebar />
-
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold">Vendors</h1>
+    <div className={adminUi.content}>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+          <div>
+            <h1 className={adminUi.h1}>Users</h1>
+            <p className={adminUi.subtitle}>Vendor accounts by email</p>
+          </div>
+          <Link to="/vendors/new" className={adminUi.primaryBtn}>
+            + Add vendor
+          </Link>
+        </div>
 
         <input
-          placeholder="Search email..."
+          placeholder="Search by email…"
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="border p-2 my-4"
+          onChange={(e) => setSearch(e.target.value)}
+          className={`${adminUi.input} max-w-md mb-6`}
         />
 
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th>Business</th>
-              <th>Email</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.map(v => (
-              <tr key={v.id}>
-                <td>{v.business_name}</td>
-                <td>{v.user?.email}</td>
-                <td>{v.status}</td>
+        <div className={`${adminUi.card} p-0 overflow-x-auto`}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="py-3 px-4">Business</th>
+                <th className="py-3 px-4">Email</th>
+                <th className="py-3 px-4">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filtered.map((v) => (
+                <tr
+                  key={v.id}
+                  className="border-b border-gray-100 hover:bg-gray-50/80"
+                >
+                  <td className="py-3 px-4">
+                    <Link
+                      to={`/vendors/${v.id}`}
+                      className="text-[#1DB954] font-medium hover:underline"
+                    >
+                      {v.business_name}
+                    </Link>
+                  </td>
+                  <td className="py-3 px-4 text-gray-600">{v.user?.email}</td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        v.status === "active"
+                          ? "bg-emerald-50 text-emerald-800"
+                          : "bg-amber-50 text-amber-800"
+                      }`}
+                    >
+                      {v.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
     </div>
   );
 };

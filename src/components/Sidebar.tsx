@@ -2,76 +2,79 @@ import { NavLink } from "react-router-dom";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: "📊" },
-  { to: "/vendors",   label: "Vendors",   icon: "🏪" },
-  { to: "/users",     label: "Users",     icon: "👥" },
-  { to: "/issues",    label: "Issues",    icon: "🚨" },
+  { to: "/vendors", label: "Vendors", icon: "🏪" },
+  { to: "/deals", label: "Deals", icon: "🏷️" },
+  { to: "/users", label: "Users", icon: "👥" },
+  { to: "/issues", label: "Issues", icon: "🚨" },
 ];
 
 const Sidebar = () => (
-  <div style={wrap}>
-    {/* Brand */}
-    <div style={brand}>
-      <div style={logoCircle}>
+  <div className="flex h-full min-h-screen w-[220px] shrink-0 flex-col bg-gray-100 px-4 py-6 text-gray-900 dark:bg-[#1A1F2E] dark:text-white">
+    <div className="mb-8 flex items-center gap-2.5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1DB954] shadow-[0_4px_12px_rgba(29,185,84,0.4)]">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M9 22V12h6v10" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path
+            d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+            stroke="#fff"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M9 22V12h6v10"
+            stroke="#fff"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </div>
-      <span style={brandText}>Grabbit</span>
+      <span className="text-xl font-extrabold tracking-tight">Grabbit</span>
     </div>
 
-    <p style={sectionLabel}>MENU</p>
+    <p className="mb-2 pl-3 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 dark:text-[#5A6478]">
+      MENU
+    </p>
 
-    <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    <nav className="flex flex-col gap-1">
       {links.map(({ to, label, icon }) => (
         <NavLink
           key={to}
           to={to}
-          style={({ isActive }) => ({ ...navLink, ...(isActive ? activeLink : {}) })}
+          className={({ isActive }) =>
+            [
+              "flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-sm font-semibold no-underline transition-colors",
+              isActive
+                ? "bg-white text-[#1DB954] shadow-sm ring-1 ring-gray-200 dark:bg-[#252B3B] dark:text-[#1DB954] dark:ring-0"
+                : "text-gray-600 hover:bg-white/80 hover:text-gray-900 dark:text-[#8A93A8] dark:hover:bg-[#252B3B]/60 dark:hover:text-gray-200",
+            ].join(" ")
+          }
         >
-          <span style={{ fontSize: 18 }}>{icon}</span>
+          <span className="text-lg leading-none">{icon}</span>
           {label}
         </NavLink>
       ))}
     </nav>
+
+    <div className="min-h-4 flex-1" aria-hidden />
+
+    <div className="-mx-1 border-t border-gray-200 pt-3 dark:border-[#252B3B]">
+      <NavLink
+        to="/settings"
+        className={({ isActive }) =>
+          [
+            "flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-sm font-semibold no-underline transition-colors",
+            isActive
+              ? "bg-white text-[#1DB954] shadow-sm ring-1 ring-gray-200 dark:bg-[#252B3B] dark:text-[#1DB954] dark:ring-0"
+              : "text-gray-600 hover:bg-white/80 hover:text-gray-900 dark:text-[#8A93A8] dark:hover:bg-[#252B3B]/60 dark:hover:text-gray-200",
+          ].join(" ")
+        }
+      >
+        <span className="text-lg leading-none">⚙️</span>
+        Settings
+      </NavLink>
+    </div>
   </div>
 );
-
-const wrap: React.CSSProperties = {
-  width: 220,
-  background: "#1A1F2E",   // dark slate — no green tint
-  color: "#fff",
-  padding: "24px 16px",
-  minHeight: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  flexShrink: 0,
-};
-const brand: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: 10, marginBottom: 32,
-};
-const logoCircle: React.CSSProperties = {
-  width: 40, height: 40, borderRadius: "50%", backgroundColor: "#1DB954",
-  display: "flex", alignItems: "center", justifyContent: "center",
-  boxShadow: "0 4px 12px rgba(29,185,84,0.4)",
-};
-const brandText: React.CSSProperties = {
-  fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px",
-};
-const sectionLabel: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, color: "#5A6478",
-  letterSpacing: "1.5px", marginBottom: 8, paddingLeft: 12,
-};
-const navLink: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: 10,
-  padding: "10px 12px", borderRadius: 10,
-  color: "#8A93A8", textDecoration: "none",
-  fontSize: 14, fontWeight: 600,
-  transition: "all 0.15s",
-};
-const activeLink: React.CSSProperties = {
-  backgroundColor: "#252B3B",
-  color: "#1DB954",
-};
 
 export default Sidebar;

@@ -1,29 +1,32 @@
 import { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
+import { Link } from "react-router-dom";
 import VendorTable from "../components/vendortable";
-import CreateVendorModal from "../components/CreateVendorModal";
 import { supabase } from "../utils/supabase";
+import {
+  mapVendorProfileRow,
+  VENDOR_PROFILE_SELECT,
+} from "../utils/vendorData";
 import type { Vendor, VendorStatus } from "../components/vendor";
+import { adminUi } from "../constants/adminUi";
 
 const VendorsPage = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | VendorStatus>("all");
-  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchVendors = async () => {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from("vendors")
-      .select("*, user:users(id, email, full_name, phone)");
+      .from("vendor_profiles")
+      .select(VENDOR_PROFILE_SELECT);
 
     if (error) {
       console.error(error.message);
       setVendors([]);
     } else {
-      setVendors((data as Vendor[]) || []);
+      setVendors((data || []).map(mapVendorProfileRow));
     }
 
     setLoading(false);
@@ -34,12 +37,11 @@ const VendorsPage = () => {
   }, []);
 
   const toggleStatus = async (id: string, status: VendorStatus) => {
-    const newStatus: VendorStatus =
-      status === "active" ? "blocked" : "active";
+    const nextVerified = status !== "active";
 
     const { error } = await supabase
-      .from("vendors")
-      .update({ status: newStatus })
+      .from("profiles")
+      .update({ is_verified: nextVerified })
       .eq("id", id);
 
     if (error) {
@@ -57,21 +59,25 @@ const VendorsPage = () => {
     .filter((v) => filter === "all" || v.status === filter);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar />
+    <div className={adminUi.content}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start mb-6">
+          <div>
+            <h1 className={adminUi.h1}>Vendors</h1>
+            <p className={adminUi.subtitle}>
+              Search, verify, and manage vendor accounts
+            </p>
+          </div>
+          <Link to="/vendors/new" className={adminUi.primaryBtn}>
+            + Add vendor
+          </Link>
+        </div>
 
-      <div style={{ flex: 1, padding: 24 }}>
-        <h1>Vendors</h1>
-
-        <button onClick={() => setShowModal(true)}>
-          + Create Vendor
-        </button>
-
-        <div style={{ margin: "10px 0", display: "flex", gap: 10 }}>
+        <div className={`${adminUi.toolbarRow} mb-6`}>
           <input
-            placeholder="Search..."
+            placeholder="Search by business name…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className={`${adminUi.input} max-w-md`}
           />
 
           <select
@@ -79,26 +85,23 @@ const VendorsPage = () => {
             onChange={(e) =>
               setFilter(e.target.value as "all" | VendorStatus)
             }
+            className={`${adminUi.select} w-auto min-w-[160px]`}
           >
             <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="blocked">Blocked</option>
+            <option value="active">Verified</option>
+            <option value="pending">Pending</option>
           </select>
         </div>
 
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <VendorTable vendors={filtered} onToggle={toggleStatus} />
-        )}
-      </div>
-
-      {showModal && (
-        <CreateVendorModal
-          onClose={() => setShowModal(false)}
-          onSuccess={fetchVendors}
-        />
-      )}
+        <div className={`${adminUi.card} p-0 overflow-hidden`}>
+          {loading ? (
+            <p className="p-8 text-gray-500 text-center">Loading…</p>
+          ) : (
+            <div className="p-4 overflow-x-auto">
+              <VendorTable vendors={filtered} onToggle={toggleStatus} />
+            </div>
+          )}
+        </div>
     </div>
   );
 };
