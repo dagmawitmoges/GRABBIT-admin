@@ -5,6 +5,23 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>grabbit-admin</title>
+    <script>
+      (function () {
+        try {
+          var k = "grabbit-admin-theme";
+          var v = localStorage.getItem(k);
+          var prefersDark =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var dark =
+            v === "dark" ? true : v === "light" ? false : prefersDark;
+          var root = document.documentElement;
+          if (dark) root.classList.add("dark");
+          else root.classList.remove("dark");
+          root.style.colorScheme = dark ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
